@@ -41,7 +41,9 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AzureBlobLeaseManagerShould.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AzureBlobBuilderExtensionShould.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FluentAssertions">
@@ -53,6 +55,12 @@
     <PackageReference Include="xunit.runner.visualstudio">
       <Version>2.3.1</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Topshelf.Leader.AzureBlob\Topshelf.Leader.AzureBlob.csproj">
+      <Project>{86fa80f4-c2cb-4f35-9985-8aaf4ef5577b}</Project>
+      <Name>Topshelf.Leader.AzureBlob</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

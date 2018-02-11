@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+    <metadata>
+        <id>Topshelf.Leader.AzureBlob</id>
+        <version>$version$</version>
+        <title>Topshelf Leader AzureBlob Lease Manager</title>
+        <authors>Steven Ward</authors>
+        <owners>Steven Ward</owners>
+        <licenseUrl>https://raw.githubusercontent.com/stevewgh/Topshelf.Leader.AzureBlob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/stevewgh/Topshelf.Leader.AzureBlob</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Azure Blob based lease manager for use with Topshelf.Leader.</description>
+        <releaseNotes />
+        <copyright>Copyright 2018</copyright>
+        <tags>Topshelf Leader Election Azure Blob</tags>
+        <dependencies>
+            <group>
+                <dependency id="Topshelf.Leader" version="1.0.240" />
+            </group>
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="bin\$configuration$\Topshelf.Leader.AzureBlob.dll" target="lib\net452\Topshelf.Leader.AzureBlob.dll" />
+    </files>
+</package>

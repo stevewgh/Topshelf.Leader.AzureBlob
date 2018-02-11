@@ -14,6 +14,7 @@ namespace Topshelf.Leader.AzureBlob.Console
                 {
                     sc.WhenStartedAsLeader(b =>
                     {
+                        b.UpdateLeaseEvery(TimeSpan.FromMinutes(1));
                         b.AttemptToBeTheLeaderEvery(TimeSpan.FromMinutes(1));
                         b.WhenLeaderIsElected(iamLeader =>
                         {

@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.RetryPolicies;
+using Topshelf.Logging;
 
 namespace Topshelf.Leader.AzureBlob
 {
@@ -36,6 +36,7 @@ namespace Topshelf.Leader.AzureBlob
     public class AzureBlobLeaseManager : ILeaseManager
     {
         private readonly CloudPageBlob leaseBlob;
+        private readonly LogWriter logger = HostLogger.Get<ILeaseManager>();
 
         public AzureBlobLeaseManager(BlobSettings settings)
             : this(settings.StorageAccount.CreateCloudBlobClient(), settings.Container, settings.BlobName)
@@ -52,9 +53,9 @@ namespace Topshelf.Leader.AzureBlob
         public async Task<bool> AcquireLease(string nodeId, CancellationToken token)
         {
             var blobNotFound = false;
+            var leaseIdentifier = NodeToLeaseIdentifier(nodeId);
             try
             {
-                var leaseIdentifier = NodeToLeaseIdentifier(nodeId);
                 var lease = await leaseBlob.AcquireLeaseAsync(TimeSpan.FromSeconds(60), leaseIdentifier, token);
                 return leaseIdentifier == lease;
             }
@@ -66,11 +67,11 @@ namespace Topshelf.Leader.AzureBlob
                     {
                         switch (response.StatusCode)
                         {
-                            case HttpStatusCode.BadRequest:
                             case HttpStatusCode.NotFound:
                                 blobNotFound = true;
                                 break;
                             case HttpStatusCode.Conflict:
+                                logger.WarnFormat("LeaseIdentifier {0} already existed. If you manually released the lease you can ignore this warning.", leaseIdentifier);
                                 return false;
                         }
                     }
@@ -99,9 +100,7 @@ namespace Topshelf.Leader.AzureBlob
             }
             catch (StorageException storageException)
             {
-                // catch (WebException webException)
-                Trace.TraceError(storageException.Message);
-
+                logger.WarnFormat("{0} {1}", nameof(RenewLease), storageException.Message);
                 return false;
             }
         }
@@ -115,7 +114,7 @@ namespace Topshelf.Leader.AzureBlob
             catch (StorageException e)
             {
                 // Lease will eventually be released.
-                Trace.TraceError(e.Message);
+                logger.ErrorFormat("{0} {1}", nameof(ReleaseLease), e.Message);
             }
         }
 
@@ -126,11 +125,13 @@ namespace Topshelf.Leader.AzureBlob
 
         private async Task CreateBlobAsync(CancellationToken token)
         {
+            logger.InfoFormat("Creating container {0} if it does not exist.", leaseBlob.Container.Name);
             await leaseBlob.Container.CreateIfNotExistsAsync(token);
             if (!await leaseBlob.ExistsAsync(token))
             {
                 try
                 {
+                    logger.InfoFormat("Creating blob {0}.", leaseBlob.Name);
                     await leaseBlob.CreateAsync(0, token);
                 }
                 catch (StorageException e)

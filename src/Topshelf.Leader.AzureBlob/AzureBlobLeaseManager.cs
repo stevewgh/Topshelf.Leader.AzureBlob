@@ -37,6 +37,7 @@ namespace Topshelf.Leader.AzureBlob
     {
         private readonly CloudPageBlob leaseBlob;
         private readonly LogWriter logger = HostLogger.Get<ILeaseManager>();
+        private readonly AzureBlobLeaseLengthCalculator leaseCalculator;
 
         public AzureBlobLeaseManager(BlobSettings settings)
             : this(settings.StorageAccount.CreateCloudBlobClient(), settings.Container, settings.BlobName)
@@ -48,14 +49,15 @@ namespace Topshelf.Leader.AzureBlob
             blobClient.DefaultRequestOptions.RetryPolicy = new LinearRetry(TimeSpan.FromSeconds(1), 3);
             var container = blobClient.GetContainerReference(leaseContainerName);
             leaseBlob = container.GetPageBlobReference(leaseBlobName);
+            leaseCalculator = new AzureBlobLeaseLengthCalculator();
         }
 
-        public async Task<bool> AcquireLease(string nodeId, CancellationToken token)
+        public async Task<bool> AcquireLease(LeaseOptions options, CancellationToken token)
         {
-            var leaseIdentifier = NodeToLeaseIdentifier(nodeId);
+            var leaseIdentifier = NodeToLeaseIdentifier(options.NodeId);
             try
             {
-                var lease = await leaseBlob.AcquireLeaseAsync(TimeSpan.FromSeconds(60), leaseIdentifier, token);
+                var lease = await leaseBlob.AcquireLeaseAsync(leaseCalculator.Calculate(options.LeaseCriteria), leaseIdentifier, token);
                 return leaseIdentifier == lease;
             }
             catch (StorageException storageException)
@@ -65,7 +67,7 @@ namespace Topshelf.Leader.AzureBlob
                     {
                         case HttpStatusCode.NotFound:
                             await CreateBlobAsync(token);
-                            return await AcquireLease(nodeId, token);
+                            return await AcquireLease(options, token);
                         case HttpStatusCode.Conflict:
                             logger.Info("Could not Aquire the lease, another node owns the lease.");
                             return false;
@@ -75,11 +77,11 @@ namespace Topshelf.Leader.AzureBlob
             }
         }
 
-        public async Task<bool> RenewLease(string nodeId, CancellationToken token)
+        public async Task<bool> RenewLease(LeaseOptions options, CancellationToken token)
         {
             try
             {
-                await leaseBlob.RenewLeaseAsync(new AccessCondition { LeaseId = NodeToLeaseIdentifier(nodeId) }, token);
+                await leaseBlob.RenewLeaseAsync(new AccessCondition { LeaseId = NodeToLeaseIdentifier(options.NodeId) }, token);
                 return true;
             }
             catch (StorageException storageException)
@@ -89,11 +91,11 @@ namespace Topshelf.Leader.AzureBlob
             }
         }
 
-        public async Task ReleaseLease(string nodeId)
+        public async Task ReleaseLease(LeaseReleaseOptions options)
         {
             try
             {
-                await leaseBlob.ReleaseLeaseAsync(new AccessCondition { LeaseId = NodeToLeaseIdentifier(nodeId) });
+                await leaseBlob.ReleaseLeaseAsync(new AccessCondition { LeaseId = NodeToLeaseIdentifier(options.NodeId) });
             }
             catch (StorageException e)
             {

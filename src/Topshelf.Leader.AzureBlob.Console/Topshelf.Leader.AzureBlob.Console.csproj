@@ -61,7 +61,7 @@
       <Version>3.0.61</Version>
     </PackageReference>
     <PackageReference Include="Topshelf.Leader">
-      <Version>1.0.240</Version>
+      <Version>1.0.241</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

@@ -60,25 +60,17 @@ namespace Topshelf.Leader.AzureBlob
             }
             catch (StorageException storageException)
             {
-                if (storageException.InnerException is WebException webException)
-                {
-                    if (webException.Response is HttpWebResponse response)
+                if (storageException.InnerException is WebException webException && webException.Response is HttpWebResponse response)
+                    switch (response.StatusCode)
                     {
-                        switch (response.StatusCode)
-                        {
-                            case HttpStatusCode.NotFound:
-                                await CreateBlobAsync(token);
-                                return await AcquireLease(nodeId, token);
-                            case HttpStatusCode.Conflict:
-                                logger.WarnFormat("LeaseIdentifier {0} already existed. If you manually released the lease you can ignore this warning.", leaseIdentifier);
-                                return false;
-                        }
+                        case HttpStatusCode.NotFound:
+                            await CreateBlobAsync(token);
+                            return await AcquireLease(nodeId, token);
+                        case HttpStatusCode.Conflict:
+                            logger.Info("Could not Aquire the lease, another node owns the lease.");
+                            return false;
                     }
-                    else
-                    {
-                        return false;
-                    }
-                }
+
                 throw;
             }
         }
@@ -92,7 +84,7 @@ namespace Topshelf.Leader.AzureBlob
             }
             catch (StorageException storageException)
             {
-                logger.WarnFormat("{0} {1}", nameof(RenewLease), storageException.Message);
+                logger.WarnFormat("Could not renew the lease {0}", storageException.Message);
                 return false;
             }
         }
@@ -106,7 +98,7 @@ namespace Topshelf.Leader.AzureBlob
             catch (StorageException e)
             {
                 // Lease will eventually be released.
-                logger.ErrorFormat("{0} {1}", nameof(ReleaseLease), e.Message);
+                logger.ErrorFormat("Could not release the lease {0}", nameof(ReleaseLease), e.Message);
             }
         }
 

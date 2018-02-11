@@ -38,6 +38,12 @@ namespace Topshelf.Leader.AzureBlob.Console
                     sc.WhenStopped(service => service.Stop());
                     sc.ConstructUsing(name => new Service());
                 });
+
+                x.OnException(exception =>
+                {
+                    System.Console.WriteLine(exception);
+                    System.Console.ReadLine();
+                });
             });
         }
     }

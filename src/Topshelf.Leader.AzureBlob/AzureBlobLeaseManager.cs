@@ -52,7 +52,6 @@ namespace Topshelf.Leader.AzureBlob
 
         public async Task<bool> AcquireLease(string nodeId, CancellationToken token)
         {
-            var blobNotFound = false;
             var leaseIdentifier = NodeToLeaseIdentifier(nodeId);
             try
             {
@@ -68,8 +67,8 @@ namespace Topshelf.Leader.AzureBlob
                         switch (response.StatusCode)
                         {
                             case HttpStatusCode.NotFound:
-                                blobNotFound = true;
-                                break;
+                                await CreateBlobAsync(token);
+                                return await AcquireLease(nodeId, token);
                             case HttpStatusCode.Conflict:
                                 logger.WarnFormat("LeaseIdentifier {0} already existed. If you manually released the lease you can ignore this warning.", leaseIdentifier);
                                 return false;
@@ -80,15 +79,8 @@ namespace Topshelf.Leader.AzureBlob
                         return false;
                     }
                 }
+                throw;
             }
-
-            if (blobNotFound)
-            {
-                await CreateBlobAsync(token);
-                return await AcquireLease(nodeId, token);
-            }
-
-            return false;
         }
 
         public async Task<bool> RenewLease(string nodeId, CancellationToken token)

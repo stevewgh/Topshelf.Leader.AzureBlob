@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.WindowsAzure.Storage;
 
 namespace Topshelf.Leader.AzureBlob.Console
 {
@@ -27,7 +28,9 @@ namespace Topshelf.Leader.AzureBlob.Console
                             System.Console.BackgroundColor = ConsoleColor.Black;
                         });
 
-                        b.WithAzureBlobStorageLeaseManager(new BlobSettings());
+                        var cloudStorageAccount = CloudStorageAccount.Parse("");
+                        var blobSettings = new BlobSettings(cloudStorageAccount, "", "");
+                        b.WithAzureBlobStorageLeaseManager(blobSettings);
                         b.WhenStarted(async (service, token) => await service.Start(token));
                     });
                     sc.WhenStopped(service => service.Stop());

@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AzureBlobLeaseManagerShould.cs" />
+    <Compile Include="StringToGuidConverterShould.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AzureBlobBuilderExtensionShould.cs" />
   </ItemGroup>

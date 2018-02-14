@@ -14,16 +14,15 @@ namespace Topshelf.Leader.AzureBlob.Tests
         public void allow_only_one_lease_manager_to_own_the_mutex_at_any_given_time()
         {
             const int concurrentMutexes = 5;
+            var leaseLength = TimeSpan.FromSeconds(5);
 
             using (var cts = new CancellationTokenSource())
             {
                 var settings = new BlobSettings(CloudStorageAccount.DevelopmentStorageAccount, "integration", "onlyonegetsalease");
                 var counter = 0;
                 var managers = Enumerable.Range(0, concurrentMutexes)
-                    .Select(completed => new AzureBlobLeaseManager(settings)).Select(manager =>
-                        manager.AcquireLease(
-                                new LeaseOptions(counter++.ToString(),
-                                    new LeaseCriteria(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60))), cts.Token)
+                    .Select(completed => new AzureBlobLeaseManager(settings, leaseLength)).Select(manager =>
+                        manager.AcquireLease(new LeaseOptions(counter++.ToString()), cts.Token)
                             .ConfigureAwait(false));
 
                 var count = managers.Select(task => task.GetAwaiter().GetResult()).Count(b => b);

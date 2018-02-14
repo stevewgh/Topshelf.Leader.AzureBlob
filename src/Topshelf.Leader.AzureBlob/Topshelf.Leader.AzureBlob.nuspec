@@ -15,7 +15,7 @@
         <tags>Topshelf Leader Election Azure Blob</tags>
         <dependencies>
             <group>
-                <dependency id="Topshelf.Leader" version="1.0.240" />
+                <dependency id="Topshelf.Leader" version="1.0.247" />
             </group>
         </dependencies>
     </metadata>

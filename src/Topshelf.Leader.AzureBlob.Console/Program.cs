@@ -14,8 +14,18 @@ namespace Topshelf.Leader.AzureBlob.Console
                 {
                     sc.WhenStartedAsLeader(b =>
                     {
-                        b.RenewLeaseEvery(TimeSpan.FromSeconds(30));
-                        b.AquireLeaseEvery(TimeSpan.FromMinutes(1));
+                        b.Lease(lcb =>
+                        {
+                            lcb.RenewLeaseEvery(TimeSpan.FromSeconds(30));
+                            lcb.AquireLeaseEvery(TimeSpan.FromMinutes(1));
+                            lcb.LeaseLength(TimeSpan.FromSeconds(15));
+
+                            var cloudStorageAccount = CloudStorageAccount.Parse(ConfigurationManager.ConnectionStrings["CloudStorageAccount"].ConnectionString);
+                            var blobSettings = new BlobSettings(cloudStorageAccount);
+                            lcb.WithAzureBlobStorageLeaseManager(blobSettings);
+                        });
+
+                        b.WhenStarted(async (service, token) => await service.Start(token));
                         b.WhenLeaderIsElected(iamLeader =>
                         {
                             if (iamLeader)
@@ -30,10 +40,6 @@ namespace Topshelf.Leader.AzureBlob.Console
                             System.Console.BackgroundColor = ConsoleColor.Black;
                         });
 
-                        var cloudStorageAccount = CloudStorageAccount.Parse(ConfigurationManager.ConnectionStrings["CloudStorageAccount"].ConnectionString);
-                        var blobSettings = new BlobSettings(cloudStorageAccount);
-                        b.WithAzureBlobStorageLeaseManager(blobSettings);
-                        b.WhenStarted(async (service, token) => await service.Start(token));
                     });
                     sc.WhenStopped(service => service.Stop());
                     sc.ConstructUsing(name => new Service());

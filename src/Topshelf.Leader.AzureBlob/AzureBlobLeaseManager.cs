@@ -37,19 +37,19 @@ namespace Topshelf.Leader.AzureBlob
     {
         private readonly CloudPageBlob leaseBlob;
         private readonly LogWriter logger = HostLogger.Get<ILeaseManager>();
-        private readonly AzureBlobLeaseLengthCalculator leaseCalculator;
+        private readonly TimeSpan leaseLength;
 
-        public AzureBlobLeaseManager(BlobSettings settings)
+        public AzureBlobLeaseManager(BlobSettings settings, TimeSpan leaseLength)
             : this(settings.StorageAccount.CreateCloudBlobClient(), settings.Container, settings.BlobName)
         {
+            this.leaseLength = leaseLength;
         }
 
-        public AzureBlobLeaseManager(CloudBlobClient blobClient, string leaseContainerName, string leaseBlobName)
+        protected AzureBlobLeaseManager(CloudBlobClient blobClient, string leaseContainerName, string leaseBlobName)
         {
             blobClient.DefaultRequestOptions.RetryPolicy = new LinearRetry(TimeSpan.FromSeconds(1), 3);
             var container = blobClient.GetContainerReference(leaseContainerName);
             leaseBlob = container.GetPageBlobReference(leaseBlobName);
-            leaseCalculator = new AzureBlobLeaseLengthCalculator();
         }
 
         public async Task<bool> AcquireLease(LeaseOptions options, CancellationToken token)
@@ -57,7 +57,7 @@ namespace Topshelf.Leader.AzureBlob
             var leaseIdentifier = NodeToLeaseIdentifier(options.NodeId);
             try
             {
-                var lease = await leaseBlob.AcquireLeaseAsync(leaseCalculator.Calculate(options.LeaseCriteria), leaseIdentifier, token);
+                var lease = await leaseBlob.AcquireLeaseAsync(leaseLength, leaseIdentifier, token);
                 return leaseIdentifier == lease;
             }
             catch (StorageException storageException)

@@ -2,9 +2,15 @@
 {
     public static class AzureBlobBuilderExtension
     {
-        public static void WithAzureBlobStorageLeaseManager<T>(this LeaderConfigurationBuilder<T> builder, BlobSettings settings)
+        public static void WithAzureBlobStorageLeaseManager(this LeaseConfigurationBuilder builder, BlobSettings settings)
         {
-            builder.WithLeaseManager(new AzureBlobLeaseManager(settings));
+            builder.WithLeaseManager(lc =>
+            {
+                var validator = new AzureBlobLeaseLengthValidator();
+                var leaseLength = lc.LeaseLengthCalculator.Calculate();
+                validator.Validate(leaseLength);
+                return new AzureBlobLeaseManager(settings, leaseLength);
+            });
         }
     }
 }

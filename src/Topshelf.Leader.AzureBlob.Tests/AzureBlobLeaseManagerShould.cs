@@ -7,14 +7,14 @@ using Xunit;
 
 namespace Topshelf.Leader.AzureBlob.Tests
 {
+    [Trait("Category", "Integration")]
     public class AzureBlobLeaseManagerShould
     {
         [Fact]
-        [Trait("Category", "Integration")]
         public void allow_only_one_lease_manager_to_own_the_mutex_at_any_given_time()
         {
             const int concurrentMutexes = 5;
-            var leaseLength = TimeSpan.FromSeconds(5);
+            var leaseLength = TimeSpan.FromSeconds(15);
 
             using (var cts = new CancellationTokenSource())
             {
@@ -32,68 +32,56 @@ namespace Topshelf.Leader.AzureBlob.Tests
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
-        public void LeaderRenewsLease()
+        public async Task when_the_leader_renews_the_lease_another_node_cant_become_leader()
         {
-            //const int ConcurrentMutexes = 5;
-            //var settings = new BlobSettings(CloudStorageAccount.DevelopmentStorageAccount, "leases", "LeaderRenewsLease");
+            var settings = new BlobSettings(CloudStorageAccount.DevelopmentStorageAccount, "integration", "LeaderRenewing");
 
-            //var mutexAcquired = Enumerable.Range(0, ConcurrentMutexes).Select(_ => new TaskCompletionSource<bool>()).ToArray();
+            var leaseLength = TimeSpan.FromSeconds(15);
 
-            //var mutexes = mutexAcquired.Select(completed => new BlobDistributedMutex(settings, SignalAndWait(completed))).ToArray();
+            var firstLeader = new AzureBlobLeaseManager(settings, leaseLength);
+            await firstLeader.AcquireLease(new LeaseOptions(nameof(firstLeader)), CancellationToken.None);
+            await Task.Delay(leaseLength);
 
-            //var cts = new CancellationTokenSource();
+            await firstLeader.RenewLease(new LeaseOptions(nameof(firstLeader)), CancellationToken.None);
 
-            //foreach (var mutex in mutexes)
-            //{
-            //    mutex.RunTaskWhenMutexAcquired(cts.Token);
-            //}
+            var secondLeader = new AzureBlobLeaseManager(settings, leaseLength);
+            Assert.False(await secondLeader.AcquireLease(new LeaseOptions(nameof(secondLeader)), CancellationToken.None));
 
-            //bool allFinished = Task.WaitAll(mutexAcquired.Select(x => (Task)x.Task).ToArray(), TimeSpan.FromMinutes(3));
-
-            //cts.Cancel();
-
-            //Assert.IsFalse(allFinished);
-            //Assert.AreEqual(1, mutexAcquired.Count(x => x.Task.IsCompleted));
+            await firstLeader.ReleaseLease(new LeaseReleaseOptions(nameof(firstLeader)));
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
-        public void LeaderAbortingCreatesNewLeader()
+        public async Task when_the_leader_doesnt_renew_the_lease_another_node_can_become_leader()
         {
-            //const int ConcurrentMutexes = 5;
-            //var settings = new BlobSettings(CloudStorageAccount.DevelopmentStorageAccount, "leases", "LeaderAbortingCreatesNewLeader");
+            var settings = new BlobSettings(CloudStorageAccount.DevelopmentStorageAccount, "integration", "LeaderRenewing");
 
-            //var firstCts = new CancellationTokenSource();
-            //var firstMutexAcquired = new TaskCompletionSource<bool>();
-            //var firstLeader = new BlobDistributedMutex(settings, SignalAndWait(firstMutexAcquired));
-            //firstLeader.RunTaskWhenMutexAcquired(firstCts.Token);
+            var leaseLength = TimeSpan.FromSeconds(15);
+            var leaseExpiryWaitTime = TimeSpan.FromSeconds(5);
 
-            //Assert.IsTrue(firstMutexAcquired.Task.Wait(TimeSpan.FromSeconds(5)));
+            var firstLeader = new AzureBlobLeaseManager(settings, leaseLength);
+            await firstLeader.AcquireLease(new LeaseOptions(nameof(firstLeader)), CancellationToken.None);
+            await Task.Delay(leaseLength + leaseExpiryWaitTime);
 
-            //var mutexAcquired = Enumerable.Range(0, ConcurrentMutexes).Select(_ => new TaskCompletionSource<bool>()).ToArray();
+            var secondLeader = new AzureBlobLeaseManager(settings, leaseLength);
+            Assert.True(await secondLeader.AcquireLease(new LeaseOptions(nameof(secondLeader)), CancellationToken.None));
 
-            //var mutexes = mutexAcquired.Select(completed => new BlobDistributedMutex(settings, SignalAndWait(completed))).ToArray();
-
-            //var cts = new CancellationTokenSource();
-
-            //foreach (var mutex in mutexes)
-            //{
-            //    mutex.RunTaskWhenMutexAcquired(cts.Token);
-            //}
-
-            //firstCts.Cancel();
-
-            //Task.WaitAny(mutexAcquired.Select(x => (Task)x.Task).ToArray(), TimeSpan.FromSeconds(80));
-
-            //cts.Cancel();
-
-            //Assert.AreEqual(1, mutexAcquired.Count(x => x.Task.IsCompleted));
+            await secondLeader.ReleaseLease(new LeaseReleaseOptions(nameof(secondLeader)));
         }
 
-        private static Func<CancellationToken, Task> SignalAndWait(TaskCompletionSource<bool> signal)
+        [Fact]
+        public async Task when_the_leader_aborts_another_node_can_become_leader()
         {
-            return async token => { signal.SetResult(true); await Task.Delay(1000000, token); };
+            var settings = new BlobSettings(CloudStorageAccount.DevelopmentStorageAccount, "integration", "LeaderAbortingCreatesNewLeader");
+
+            var tokenSource = new CancellationTokenSource();
+            var firstLeader = new AzureBlobLeaseManager(settings, TimeSpan.FromSeconds(15));
+            var secondLeader = new AzureBlobLeaseManager(settings, TimeSpan.FromSeconds(15));
+
+            Assert.True(await firstLeader.AcquireLease(new LeaseOptions(nameof(firstLeader)), tokenSource.Token));
+            Assert.False(await secondLeader.AcquireLease(new LeaseOptions(nameof(secondLeader)), tokenSource.Token));
+            await firstLeader.ReleaseLease(new LeaseReleaseOptions(nameof(firstLeader)));
+
+            Assert.True(await secondLeader.AcquireLease(new LeaseOptions(nameof(secondLeader)), tokenSource.Token));
         }
     }
 }

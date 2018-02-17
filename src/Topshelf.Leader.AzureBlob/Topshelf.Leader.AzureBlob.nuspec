@@ -15,7 +15,9 @@
         <tags>Topshelf Leader Election Azure Blob</tags>
         <dependencies>
             <group>
-                <dependency id="Topshelf.Leader" version="1.0.248" />
+              <dependency id="Topshelf.Leader" version="1.1.1" />
+              <dependency id="WindowsAzure.Storage" version="9.0.0" />
+              <dependency id="FluentValidation" version="7.4.0" />
             </group>
         </dependencies>
     </metadata>

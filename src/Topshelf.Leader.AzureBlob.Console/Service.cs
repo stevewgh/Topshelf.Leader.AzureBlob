@@ -13,8 +13,8 @@ namespace Topshelf.Leader.AzureBlob.Console
 
         public async Task Start(CancellationToken token)
         {
-            System.Console.WriteLine("Starting and will now delay.");
-            await Task.Delay(TimeSpan.FromMinutes(1), token);
+            System.Console.WriteLine("Starting and will now delay for 5 seconds.");
+            await Task.Delay(TimeSpan.FromSeconds(5), token);
             System.Console.WriteLine("Delay complete.");
         }
     }

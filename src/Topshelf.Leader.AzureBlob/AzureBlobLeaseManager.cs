@@ -58,6 +58,7 @@ namespace Topshelf.Leader.AzureBlob
             try
             {
                 var lease = await leaseBlob.AcquireLeaseAsync(leaseLength, leaseIdentifier, token);
+                logger.Info($"Lease aquired, lease length {leaseLength}.");
                 return leaseIdentifier == lease;
             }
             catch (StorageException storageException)
@@ -82,6 +83,7 @@ namespace Topshelf.Leader.AzureBlob
             try
             {
                 await leaseBlob.RenewLeaseAsync(new AccessCondition { LeaseId = NodeToLeaseIdentifier(options.NodeId) }, token);
+                logger.Info("Lease renewed.");
                 return true;
             }
             catch (StorageException storageException)
@@ -96,6 +98,7 @@ namespace Topshelf.Leader.AzureBlob
             try
             {
                 await leaseBlob.ReleaseLeaseAsync(new AccessCondition { LeaseId = NodeToLeaseIdentifier(options.NodeId) });
+                logger.Info("Lease released.");
             }
             catch (StorageException e)
             {

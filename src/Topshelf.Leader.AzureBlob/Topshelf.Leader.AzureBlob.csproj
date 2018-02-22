@@ -58,6 +58,9 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\README.md">
+      <Link>README.md</Link>
+    </None>
     <None Include="Topshelf.Leader.AzureBlob.nuspec" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
